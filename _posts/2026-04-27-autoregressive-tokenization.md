@@ -64,7 +64,6 @@ toc:
           - name: Heuristically encouraging AR modelability
           - name: Autoregressive priors
   - name: "Conclusion"
-  - name: Footnotes
   - name: Appendix
 
 # Below is an example of injecting additional post-specific styles.
@@ -268,11 +267,11 @@ When a modality lacks an intrinsic traversal order, the challenge is to decide (
 ### Marginalizing over orderings
 What if we simply train the model to be robust to any sequence using data augmentation? This is precisely the method behind **Any-Order Autoregressive Models (AO-ARMs)**, where the model is trained under random orderings drawn uniformly from all permutations of the input sequence <d-cite key="wang2025learningorder"></d-cite>. Given a permutation $\sigma$ of indices $\{1,\dots,n\}$, the learned distribution factorizes as
 $$p(\mathbf{x} \mid \sigma) = \Pi_{i=1}^n p(x_{\sigma_i} \mid \mathbf{x}_{\sigma_{<i}})$$
-where $\sigma_{<i}$ corresponds to indices $\{1, \ldots, i-1\}$ under the permutation σ. In this formulation, the permutation can be interpreted as a latent variable that specifies which conditional subproblem the model solves at each step. HERE1
+where $\sigma_{<i}$ corresponds to indices $\{1, \ldots, i-1\}$ under the permutation σ. In this formulation, the permutation can be interpreted as a latent variable that specifies which conditional subproblem the model solves at each step. 
 <div style="text-align: center; margin: 2rem 0;">
   <div style="display: inline-block; max-width: 450px; width: 100%;">
     {% include figure.liquid 
-        path="assets/img/2026-04-27-autoregressive-tokenization/aoarm4.gif" 
+        path="assets/img/2026-04-27-autoregressive-tokenization/aoarm4_cropped.gif" 
         class="img-fluid rounded z-depth-1"
     %}
     <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
@@ -351,8 +350,6 @@ In sum, autoregressive models offer a flexible, efficient method for generative 
 For researchers who work with boutique architectures or non-language data modalities, we want to highlight tokenization and “sequential-ization” as promising directions for future research -- in particular, modality-specific tokenization methods that anticipate the sequential nature of their downstream model and align with it. Notably, most existing alignment strategies have been explored primarily in the image domain, leaving substantial room for discovering analogous structures in other forms of data.
 
 There are many possible routes for the future of non-sequential data. Perhaps specialized architectures for each modality will win out in the end, and the mismatch we expound upon in this blogpost won’t be relevant! But at this point, it seems highly unlikely that the application of large, generalist sequential models for non-sequential data will disappear entirely. After all, even agents calling specialized models as tools must be able to describe the objects of interest with a sequence of tokens. Thus, the square peg for the round hole remains.
-
-# Footnotes
 
 [^poem]: As is famously capitalized upon in Jonathan Reed’s reversible poem “The Lost Generation” -- a clever work that can be read forwards and backwards, with diametrically opposed meanings
 
