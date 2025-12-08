@@ -41,38 +41,31 @@ bibliography: 2026-04-27-autoregressive-tokenization.bib
 #   - please use this format rather than manually creating a markdown table of contents.
 toc:
   - name: Introduction
-  - name: Primer on Autoregressive Modeling
+  - name: "Primer: Autoregressive Modeling"
     subsections:
       - name: What exactly are tokens?
-      - name: Dynamic and tokenization-free methods
-      - name: Advantages of autoregressive models
-  - name: What do we mean by “sequential” and “non-sequential” data?
+      - name: Tokenization-free methods
+      - name: Advantages
+  - name: Non-sequential data
     subsections:
       - name: Examples of sequence choice affecting modelability
       - ????
   - name: Can we just use non-sequential models?
-  - name: "Turning images into a sequence: a canonical example"
+  - name: "Example: Images"
   - name: Aligning sequential models and non-sequential data
     subsections:
-      - name: "Model-level alignment: optimizing the prediction order"
+      - name: "Model-level alignment"
         subsections:
           - name: Marginalizing over orderings
           - name: Heuristically choosing the order
           - name: Learning the order
-      - name: "Tokenization-level alignment: optimizing the input representation"
+      - name: "Tokenization-level alignment"
         subsections:
           - name: Heuristically encouraging AR modelability
           - name: Autoregressive priors
-  - name: "Outlook: what is the future for non-sequential data?"
+  - name: "Conclusion"
   - name: Footnotes
   - name: Appendix
-
-toc:
-  - name: Images and Figures
-    subsections:
-      - name: Interactive Figures
-        subsections:
-          - name: Some Detail
 
 # Below is an example of injecting additional post-specific styles.
 # This is used in the 'Layouts' section of this post.
@@ -114,13 +107,13 @@ Autoregressive sequence models sit at the center of modern generative AI, excell
     How can one apply sequential models to non-sequential (e.g. non-language) data? (Note that we will use “autoregressive model” and “sequential model” interchangeably.)
 </div>
 
-Despite this apparent mismatch between modeling assumption and data structure, autoregressive (AR) models have been repeatedly applied in such non-lingual settings <d-cite key="Antunes2024"></d-cite>. There are good reasons: AR models offer variable-length generation, precise likelihoods, flexible conditioning, and step-by-step controllability (Wang et al., 2024; Chen et al., 2024). Moreover, from a practical perspective, autoregressive models have been engineered and scaled to perfection, with well-established scaling laws, training recipes, and ready-to-use open source libraries.
+Despite this apparent mismatch between modeling assumption and data structure, autoregressive (AR) models have been repeatedly applied in such non-lingual settings <d-cite key="gregor2015draw"></d-cite>. There are good reasons: AR models offer variable-length generation, precise likelihoods, flexible conditioning, and step-by-step controllability (Wang et al., 2024; Chen et al., 2024). Moreover, from a practical perspective, autoregressive models have been engineered and scaled to perfection, with well-established scaling laws, training recipes, and ready-to-use open source libraries.
 
 This blog post explores the emerging landscape of techniques for turning non-sequential data into discrete 1D sequences, which autoregressive models can effectively process. It is intended for a diverse audience, including anyone who wishes to design machine learning systems for non-sequential data (images, molecules, point clouds, etc).  
 
 We start with a primer on autoregressive modeling, including tokenization and positional encodings. Readers familiar with these concepts already should skip ahead to the following section, which defines “non-sequential data”. We then categorize recent research into two distinct kinds of approaches: **model-level methods**, which optimize the generation order for a fixed set of tokens, and **tokenization-level methods**, which redesign the discrete input representation itself to align with a sequential prior. In the case of tokenization-level methods, we highlight the inherent tradeoff between compressibility and modelability. Although these methods often originate in different communities and target different modalities, they are instances of the same underlying challenge. Our aim is to draw out these connections, map the shared structure across approaches, and sketch a broader landscape of possibilities for modeling non-sequential data with sequential architectures.
 
-# Primer on Autoregressive Modeling 
+# Primer: Autoregressive Modeling 
 
 From the early days of recursive neural networks to the current transformer revolution, **Autoregressive Models (ARMs)** have emerged as a central paradigm for sequence-based generative modeling. By treating data as a series of discrete tokens (drawn from some finite vocabulary) and modeling their joint distribution through next-token prediction, machine learning systems achieve strong performance on tasks ranging from fluent text generation to complex program synthesis (Chen et. al., 2021; OpenAI, 2024). 
 
@@ -155,12 +148,12 @@ Subword methods strike a balance between vocabulary size and sequence length, wh
 
 Each token is moreover associated with a positional encoding, which encodes that token’s position in the sequence and breaks the native permutational invariance of the attention mechanism. However, even without positional encodings, the causal attention mask of autoregressive models still forces token generation to occur in a specific order. Thus, simply removing positional encodings does not fundamentally change the sequential nature of causal attention, as works like NoPos (CITE) have demonstrated.
 
-## Dynamic and tokenization-free methods
+## Tokenization-free methods
 
 A few recent “tokenization-free” approaches have moved away from the tokenization paradigm, which suffers from various idiosyncrasies and challenges for multilingual data (Neitemeier et al., 2025). Instead of committing to a predefined vocabulary or a fixed sequence structure, approaches such as the Byte Latent Transformer (Pagnoni et al., 2024) and H-Net (Hwang et al., 2025) let the representational units evolve during generation. If the model can decide how to construct these building blocks as it trains, then the tokenization becomes an emergent property of the model’s inference dynamics, rather than something constructed ahead of time. 
 While promising as methods for transcending hand-designed, modality-specific tokenizations, both of these models **remain autoregressive**. In other words, they both work with fixed sequences of bytes. Thus, although we will focus on the more widespread tokenization paradigm in the rest of this blog post, the mismatch between sequential models and non-sequential data prevails for tokenization-free methods, too. 
 
-## Advantages of autoregressive models
+## Advantages
 
 Autoregressive models have several useful properties that make them appealing across a wide range of generative settings (Chen et al., 2024):
 * **Variable-length generation**: The model can decide dynamically when to stop generating, for example by emitting an end-of-sequence symbol. This is especially important in settings where the desired output length is unknown or input-dependent.
@@ -171,7 +164,7 @@ Autoregressive models have several useful properties that make them appealing ac
 
 However, these advantages come at the cost of a rigid dependency structure: the model must commit to a specific, one-token-at-a-time generation order.
 
-# What do we mean by “sequential” and “non-sequential” data?
+# Non-sequential data
 
 We’ve alluded to the idea that autoregressive models rely on a *meaningful* factorization of the data into a sequence, but that certain data is “non-sequential”. What does this mean exactly? Let’s start with some examples. Spoken and written language are clearly “sequential” in a meaningful way: they are both generated in, and meant to be consumed in, a certain temporal sequence. But if someone asked you to order the pixels from an image into a sequence, what would you choose? Raster order? Top-to-bottom, or bottom-to-top? How about the atoms in a molecule? 
 
@@ -217,7 +210,7 @@ However, compared to autoregressive models, these non-sequential architectures s
 
 A well-studied domain where the lack of an inherent ordering becomes especially salient is vision. Images do not come with a built-in sequence structure, yet significant effort has been devoted to making them autoregressively modelable. We start with this domain as a case study, before diving into more recent trends of tokenization-model alignment.
 
-# Turning images into a sequence: a canonical example
+# Example: Images
 Images have no inherent traversal order, yet to apply autoregressive models, we must linearize them into a 1D sequence. The earliest attempts, such as PixelRNN (van den Oord et al., 2016), flattened the image into a sequence of raw pixels and predicted them one by one in raster scan order (top-to-bottom, left-to-right). While these models achieved strong likelihood scores, they struggled to generate high-quality samples compared to diffusion models (Theis et al., 2016). One limiting factor of pixel-level flattening was that it would result in very long sequences that are difficult to model (e.g., a 256 x 256 image results in a sequence of length 65,536). In fact, this is the same reason that tokenization arose for language (Sennrich et al., 2016)!
 
 To solve the sequence length problem, the fundamental unit of computation shifted from pixels to patches. This strategy was standardized by Vision Transformers (ViTs) (Dosovitsky et al., 2021): divide the image into fixed-size squares (e.g., 16 x 16), embed each patch as a token with positional encodings, and arrange them in a sequence. Crucially, ViTs retained the raster scan order, as shown at the bottom of the following Figure from Dosovitsky et al., (2021). 
@@ -265,7 +258,7 @@ In other words, the two overarching categories of approaches we identify are:
 We further subdivide these categories according to the following flowchart, which serves as a roadmap for the remainder of the post.
 
 
-## Model-level alignment: optimizing the prediction order
+## Model-level alignment
 When a modality lacks an intrinsic traversal order, the challenge is to decide (or discover) the prediction order that leads to the easiest, most structurally coherent subproblems for a model to learn. Several lines of work explore increasingly sophisticated ways of doing this. 
 
 ### Marginalizing over orderings
@@ -300,7 +293,7 @@ A closely related learned-ordering approach is **REOrder** (Kutscher et al., 202
 
 The model-level methods show that reordering can meaningfully reduce the difficulty of the generative task, but only within the limits imposed by the underlying tokenization. Since the representation itself is fixed, these approaches cannot introduce coarse-to-fine structure or reshape the information content of the tokens; they can only choose a more favorable sequence in which to model them. As a result, **model-level alignment can improve modelability, but it cannot fully explore the reconstruction-generation tradeoff**.
 
-## Tokenization-level alignment: optimizing the input representation
+## Tokenization-level alignment
 Tokenization-level methods are motivated by the following question: how can we provide sequential models with the “most sequential,” i.e. most modelable, representation of the input data? If the model generates autoregressively, then the tokenizer can be designed with autoregressive generation in mind from the start!. Thus, they address the reconstruction-generation tradeoff directly at the representation level, rather than merely reordering the prediction path. 
 
 ### Heuristically encouraging AR modelability
@@ -336,7 +329,7 @@ Caption: Three approaches to incorporating autoregressive priors during tokeniza
 **Learned AutoRegressive generative Prior** (LARP): Instead of forcing autoregressive constraints onto all patch tokens, LARP (Wang et al., 2025) adds a set of learned “holistic” query tokens that summarize high-level video semantics. An AR prior is trained only on these (de-quantized) query vectors, giving them a coherent causal structure without imposing constraints on the low-level patch tokens. Since they opt to use a stochastic vector quantization scheme (sampling from the codebook similarity distribution), the AR prior is trained to predict the next-token distribution. 
 Despite the surface-level methodological differences between these methods, they all build sequentiality directly into the learned tokenizer, using general learning methods rather than heuristics.
 
-# Outlook: what is the future for non-sequential data?
+# Conclusion
 
 In sum, autoregressive models offer a flexible, efficient method for generative modeling tasks, but they require tokens to be input in some ordering. However, many modalities of interest outside language lack a clear, natural ordering for tokenization. Although one can simply choose an arbitrary ordering convention, it may not optimize the resultant model’s generation quality. This is the notion of “modelability,” which we apply specifically to autoregressive models. To improve the autoregressive modelability of arbitrary modalities, model-based approaches broadly attempt to find the most modelable ordering of some fixed tokenization. In contrast, tokenization-based approaches take sequential generation into account when constructing the tokenization itself. This encourages ordered tokenizations that are easy to incrementally predict. In a scattered landscape of diverse tokenization and ordering strategies, we hope to have provided not just a methodological survey, but a unifying perspective.
 
