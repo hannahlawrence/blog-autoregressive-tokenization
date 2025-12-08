@@ -1,6 +1,6 @@
 ---
 layout: distill
-title: "Square Peg, Round Hole: Plugging Non-Sequential Data into Sequential Language Model"
+title: "Square Peg, Round Hole: Plugging Non-Sequential Data into Sequential Language Models"
 description: Your blog post's abstract.
   Please add your abstract or summary here and not in the main body of your text.
   Do not include math/latex or hyperlinks.
@@ -94,12 +94,25 @@ _styles: >
   }
 ---
 
-{% include figure.liquid path="assets/img/2026-04-27-autoregressive-tokenization/intro.png" class="img-fluid" %}
+
+
+<div style="text-align: center; margin: 2rem 0;">
+  <div style="display: inline-block; max-width: 300px; width: 100%;">
+    {% include figure.liquid 
+        path="assets/img/2026-04-27-autoregressive-tokenization/square_peg.png" 
+        class="img-fluid rounded z-depth-1"
+    %}
+  </div>
+</div>
 
 # Introduction
 Autoregressive sequence models sit at the center of modern generative AI, excelling in settings like natural language where data arrive in a well-defined sequence. However, many important modalities do not immediately offer such a linear structure. Images, graphs, point clouds, and sets lack an intrinsic notion of “the next token.”
 
-Caption: How can one apply sequential models to non-sequential (e.g. non-language) data? (Note that we will use “autoregressive model” and “sequential model” interchangeably.)
+
+{% include figure.liquid path="assets/img/2026-04-27-autoregressive-tokenization/intro.png" class="img-fluid" %}
+<div class="caption" style="text-align: center;">
+    How can one apply sequential models to non-sequential (e.g. non-language) data? (Note that we will use “autoregressive model” and “sequential model” interchangeably.)
+</div>
 
 Despite this apparent mismatch between modeling assumption and data structure, autoregressive (AR) models have been repeatedly applied in such non-lingual settings ([@Antunes2024; @10.1609/aaai.v39i24.34804; @sun2024autoregressivemodelbeatsdiffusion]). There are good reasons: AR models offer variable-length generation, precise likelihoods, flexible conditioning, and step-by-step controllability (Wang et al., 2024; Chen et al., 2024). Moreover, from a practical perspective, autoregressive models have been engineered and scaled to perfection, with well-established scaling laws, training recipes, and ready-to-use open source libraries.
 
@@ -119,7 +132,17 @@ via the chain rule, by “meaningfully” we refer to how easy it is to model ea
 
 Under this factorization, the model is trained to predict the next token $x_i$ given the context of preceding tokens $x_1,\dots,x_{i-1}$. In transformers, this is implemented via causal masking, where the self-attention mechanism prevents any position from attending to "future" tokens. 
 
-Caption: Autoregressive models predict next-token distributions over tokens based only on the preceding tokens.
+<div style="text-align: center; margin: 2rem 0;">
+  <div style="display: inline-block; max-width: 450px; width: 100%;">
+    {% include figure.liquid 
+        path="assets/img/2026-04-27-autoregressive-tokenization/ar.gif" 
+        class="img-fluid rounded z-depth-1"
+    %}
+    <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
+      Autoregressive models predict next-token distributions over tokens based only on the preceding tokens.
+    </div>
+  </div>
+</div>
 
 ## What exactly are tokens?
 So, an autoregressive model operates on a sequence of discrete tokens representing a piece of data. But what exactly are tokens, and how are they computed? At first, tokens might seem unnecessary. For example, one could simply input the raw byte sequence (e.g. UTF-8 values for text) into an autoregressive model. However, byte sequences can become very long, making long-range dependencies harder to learn and obscuring meaningful linguistic structure that the model could otherwise exploit. As a result, byte-level models often require more computation and struggle to match the efficiency and performance of systems that use more semantically informed units (Choe and Al-Rfou et al., 2019). 
@@ -168,7 +191,17 @@ In this sense, the dichotomy of “sequential” and “non-sequential” is ove
 
 The difference in modelability between different tokens orders is especially clear in domains where different prediction orders induce subproblems of highly varying difficulty. For example, consider training a model to solve Sudoku puzzles. At a given current state, some cells might be nearly forced, while others are highly ambiguous -- so, the difficulty of the prediction subproblem depends strongly on which cell is predicted first. As explored by Kim and Shah et al. (2025), changing the prediction order of the unfilled Sudoku tiles can shift the model from easy, highly-constrained cases to much harder, underdetermined ones. 
 
-
+<div style="text-align: center; margin: 2rem 0;">
+  <div style="display: inline-block; max-width: 450px; width: 100%;">
+    {% include figure.liquid 
+        path="assets/img/2026-04-27-autoregressive-tokenization/sudoku.png" 
+        class="img-fluid rounded z-depth-1"
+    %}
+    <!-- <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
+      Autoregressive models predict next-token distributions over tokens based only on the preceding tokens.
+    </div> -->
+  </div>
+</div>
 
 A similar example appears in arithmetic tasks, where models have been observed to perform better when generating blocks of digits right-to-left than left-to-right, perhaps reflecting how carries propagate in the computation (Singh and Strouse, 2024; Lee et al., 2024). Across these settings, a consistent pattern emerges: prediction orders that better align with a task’s underlying structure tend to be more effective. 
 
@@ -189,7 +222,17 @@ Images have no inherent traversal order, yet to apply autoregressive models, we 
 
 To solve the sequence length problem, the fundamental unit of computation shifted from pixels to patches. This strategy was standardized by Vision Transformers (ViTs) (Dosovitsky et al., 2021): divide the image into fixed-size squares (e.g., 16 x 16), embed each patch as a token with positional encodings, and arrange them in a sequence. Crucially, ViTs retained the raster scan order, as shown at the bottom of the following Figure from Dosovitsky et al., (2021). 
 
-Caption: The Vision Transformer architecture, where the input image is converted into a sequence by flattering the patch grid according to a raster scan order.
+<div style="text-align: center; margin: 2rem 0;">
+  <div style="display: inline-block; width: 100%;">
+    {% include figure.liquid 
+        path="assets/img/2026-04-27-autoregressive-tokenization/vit.png" 
+        class="img-fluid rounded z-depth-1"
+    %}
+    <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
+      The Vision Transformer architecture, where the input image is converted into a sequence by flattering the patch grid according to a raster scan order.
+    </div> 
+  </div>
+</div>
 
 The modern paradigm of autoregressive models for images adopts this patch-based approach via the following two-stage architecture: 
 
@@ -197,7 +240,17 @@ The modern paradigm of autoregressive models for images adopts this patch-based 
 
 2. **Stage 2 - Modeling**: A separate autoregressive (AR) Transformer is trained on the learned tokens in raster order.  By offloading low-level reconstruction to the tokenizer, the AR model can devote its computational capacity to modeling global structure and long-range interactions.
 
-Caption: Autoregressive image modeling tends to follow a two-step approach. In the first stage, discrete image tokens are trained using a reconstruction loss. In the second stage, the now-fixed tokens are fed into a transformer for generation.
+<div style="text-align: center; margin: 2rem 0;">
+  <div style="display: inline-block; width: 100%;">
+    {% include figure.liquid 
+        path="assets/img/2026-04-27-autoregressive-tokenization/two_stage.png" 
+        class="img-fluid rounded z-depth-1"
+    %}
+    <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
+      Autoregressive image modeling tends to follow a two-step approach. In the first stage, discrete image tokens are trained using a reconstruction loss. In the second stage, the now-fixed tokens are fed into a transformer for generation.
+    </div> 
+  </div>
+</div>
 
 Although VQ-VAE and VQGAN tokenizers learn a visual “vocabulary”, they do not remove the need for a fixed ordering, as the tokens are still ordered for input to the transformer. Thus, the **inherent mismatch between the prediction order and the causal structure of natural images remains**: predicting a patch from only previously raster-ordered predecessors might force the model to commit to global structural decisions (e.g., “this is a dog”) based on ambiguous local evidence (e.g., a patch of fur in the top-left corner).  This is just one example of how a representation can induce conditional prediction tasks as subproblems that are poorly aligned with the modality’s underlying structure. With this as motivation, we now turn to the general problem of aligning sequential models with non-sequential data.
 
