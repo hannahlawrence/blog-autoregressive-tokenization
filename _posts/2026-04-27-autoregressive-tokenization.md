@@ -48,7 +48,7 @@ toc:
       - name: Advantages
   - name: Non-sequential data
     subsections:
-      - name: Examples of sequence choice affecting modelability
+      - name: Examples
       - ????
   - name: Can we just use non-sequential models?
   - name: "Example: Images"
@@ -107,11 +107,11 @@ Autoregressive sequence models sit at the center of modern generative AI, excell
     How can one apply sequential models to non-sequential (e.g. non-language) data? (Note that we will use “autoregressive model” and “sequential model” interchangeably.)
 </div>
 
-Despite this apparent mismatch between modeling assumption and data structure, autoregressive (AR) models have been repeatedly applied in such non-lingual settings HERE8 <d-cite key="Antunes2024"></d-cite>. There are good reasons: AR models offer variable-length generation, precise likelihoods, flexible conditioning, and step-by-step controllability (Wang et al., 2024; Chen et al., 2024). Moreover, from a practical perspective, autoregressive models have been engineered and scaled to perfection, with well-established scaling laws, training recipes, and ready-to-use open source libraries.
+Despite this apparent mismatch between modeling assumption and data structure, autoregressive (AR) models have been repeatedly applied in such non-lingual settings <d-cite key="Antunes2024"></d-cite>. There are good reasons: AR models offer variable-length generation, precise likelihoods, flexible conditioning, and step-by-step controllability (Wang et al., 2024; Chen et al., 2024). Moreover, from a practical perspective, autoregressive models have been engineered and scaled to perfection, with well-established scaling laws, training recipes, and ready-to-use open source libraries.
 
 This blog post explores the emerging landscape of techniques for turning non-sequential data into discrete 1D sequences, which autoregressive models can effectively process. It is intended for a diverse audience, including anyone who wishes to design machine learning systems for non-sequential data (images, molecules, point clouds, etc).  
 
-We start with a primer on autoregressive modeling, including tokenization and positional encodings. Readers familiar with these concepts already should skip ahead to the following section, which defines “non-sequential data”. We then categorize recent research into two distinct kinds of approaches: **model-level methods**, which optimize the generation order for a fixed set of tokens, and **tokenization-level methods**, which redesign the discrete input representation itself to align with a sequential prior. In the case of tokenization-level methods, we highlight the inherent tradeoff between compressibility and modelability. Although these methods often originate in different communities and target different modalities, they are instances of the same underlying challenge. Our aim is to draw out these connections, map the shared structure across approaches, and sketch a broader landscape of possibilities for modeling non-sequential data with sequential architectures.
+We start with a primer on autoregressive modeling, including tokenization and positional encodings. Readers familiar with these concepts already should skip ahead to the following [section](#what-exactly-are-tokens), which defines “non-sequential data”. We then categorize recent research into two distinct kinds of approaches: **model-level methods**, which optimize the generation order for a fixed set of tokens, and **tokenization-level methods**, which redesign the discrete input representation itself to align with a sequential prior. In the case of tokenization-level methods, we highlight the inherent tradeoff between compressibility and modelability. Although these methods often originate in different communities and target different modalities, they are instances of the same underlying challenge. Our aim is to draw out these connections, map the shared structure across approaches, and sketch a broader landscape of possibilities for modeling non-sequential data with sequential architectures.
 
 # Primer: Autoregressive Modeling 
 
@@ -128,7 +128,7 @@ Under this factorization, the model is trained to predict the next token $x_i$ g
 <div style="text-align: center; margin: 2rem 0;">
   <div style="display: inline-block; max-width: 450px; width: 100%;">
     {% include figure.liquid 
-        path="assets/img/2026-04-27-autoregressive-tokenization/ar.gif" 
+        path="assets/img/2026-04-27-autoregressive-tokenization/cropped_CLM.gif" 
         class="img-fluid rounded z-depth-1"
     %}
     <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
@@ -141,8 +141,10 @@ Under this factorization, the model is trained to predict the next token $x_i$ g
 So, an autoregressive model operates on a sequence of discrete tokens representing a piece of data. But what exactly are tokens, and how are they computed? At first, tokens might seem unnecessary. For example, one could simply input the raw byte sequence (e.g. UTF-8 values for text) into an autoregressive model. However, byte sequences can become very long, making long-range dependencies harder to learn and obscuring meaningful linguistic structure that the model could otherwise exploit. As a result, byte-level models often require more computation and struggle to match the efficiency and performance of systems that use more semantically informed units (Choe and Al-Rfou et al., 2019). 
 
 This motivated the use of **tokenization**: the process of mapping raw data into a sequence of discrete symbols drawn from a finite vocabulary[^soft]. For text data, the most commonly used tokenization schemes such as Byte-Pair Encoding (BPE) (Sennrich et al., 2016), WordPiece (Devlin et al., 2019), or unigram tokenization segment strings into subword units:
-“tokenization” → [‘token’, ‘ization’]
-“codebook” → [‘code’, ‘book’]
+
+* “tokenization” → [‘token’, ‘ization’]
+
+* “codebook” → [‘code’, ‘book’]
 
 Subword methods strike a balance between vocabulary size and sequence length, whereas byte-level tokenization uses a near-minimal vocabulary that results in no information loss but produces considerably longer sequences. These choices reflect a fundamental tension in tokenizer design: **a tokenizer optimized purely for compression (i.e. the best reconstruction per bit budget) is not necessarily the one that is easiest for a generative model to predict** (as evidenced by e.g. CITE, who demonstrate that a naive compression-based tokenizer works poorly for language modeling). Later sections will revisit this reconstruction-generation tradeoff from multiple angles.
 
@@ -172,15 +174,17 @@ Perhaps you would answer that it depends on what you want to *use* the sequence 
 
 At a high-level, modelability is a general and ubiquitous idea in representation learning: simply put, some representations are easier for models to learn from than others. This perspective echoes e.g. Xu et al.’s (2020) notion of usable information, which highlights that two representations can encode exactly the same information yet differ dramatically in how easy they are for a model to approximate (Dieleman, 2025). A similar view appears in the rate-distortion-usefulness tradeoff[^tradeoff] of Tschannen et al. (2018), where the “usefulness” of a representation depends not only on information content, but also on how that information is organized. 
 
-We focus here on the specific notion of modelability for autoregressive models. The data representation is now not a single vector per datapoint $x$, but a sequence of discrete tokens $t_1(x),\dots,t_n(x)$ per datapoint. Since autoregressive models factor the data distribution as $\prod_{i=1}^n p(t_i(x)|t_{<i}(x))$, modelability asks: are the induced conditional distributions $p(t_i(x)|t_{<i}(x))$ **learnable by your model class**? Formally, we can write this as the expected binary cross-entropy (BCE) loss (denoted by $\ell(\text{distribution}, \text{true label})$) of the best next-token prediction model $p_{\theta^*}$ from your model class $\{p_\theta\}_\theta$:
-$$ \mathbb{E}_{x_1,\dots,x_n} \ell(p_\theta(\cdot | t_{<i}(x)), t_i(x)) $$
+We focus here on the specific notion of modelability for autoregressive models. The data representation is now not a single vector per datapoint, but a sequence of discrete tokens $x_1,\dots,x_n$ per datapoint. Since autoregressive models factor the data distribution as $\prod_{i=1}^n p(x_i|x_{<i})$, modelability asks: are the induced conditional distributions $p(x_i|x_{<i})$ **learnable by your model class**? Formally, we can write this as the expected binary cross-entropy (BCE) loss (denoted by $\ell(\text{distribution}, \text{true label})$) of the best next-token prediction model $p_{\theta^*}$ from the model class:
+
+$$ \mathbb{E}_{x_1,\dots,x_n} \ell(p_\theta(\cdot | x_{<i}), x_i) $$
+
 Here, by the “best” model we mean the model produced by a training procedure (usually, optimizing for the same BCE loss) over a finite training set. 
 
 In words, the autoregressive modelability of a tokenization is simply the test perplexity of the best next-token prediction model. Language (under any standard tokenizer) is highly modelable because next-token models do a good job at, well, predicting the next tokens. Note that modelability is a property of a specific tokenization of a data distribution, not the modality itself. For any data distribution and model class, we can ask what tokenization yields the optimal modelability score (the equation above). Thus, this notion of modelability implicitly depends on the inductive biases and computational limitations (e.g., finite context length and recency bias) of the model class.[^tokenization] 
 
 In this sense, the dichotomy of “sequential” and “non-sequential” is overly simplistic, since one can arbitrarily pick a sequence for any input data. What we really mean is, based on domain knowledge or just common sense, is there an **obviously modelable** sequence? If not, we call the modality “non-sequential”, and assert that more complex methods are needed to identify a modelable tokenization (more on this later). 
 
-## Examples of sequence choice affecting modelability
+## Examples
 
 The difference in modelability between different tokens orders is especially clear in domains where different prediction orders induce subproblems of highly varying difficulty. For example, consider training a model to solve Sudoku puzzles. At a given current state, some cells might be nearly forced, while others are highly ambiguous -- so, the difficulty of the prediction subproblem depends strongly on which cell is predicted first. As explored by Kim and Shah et al. (2025), changing the prediction order of the unfilled Sudoku tiles can shift the model from easy, highly-constrained cases to much harder, underdetermined ones. 
 
@@ -204,9 +208,9 @@ In this blogpost, we talk a lot about permuting data tokens. However, naively pe
 Applying standard language modeling objectives to non-sequential data requires us to force a square peg into a round hole: we must linearize the intrinsic geometry of the data into a flat sequence. This raises a challenge: **how should sequential models operate when there is no intrinsic order to exploit?**
 
 # Can we just use non-sequential models?
-Given that many modalities lack a natural left-to-right structure, one might reasonably ask: why use autoregressive models at all? Indeed, some of the most popular alternative frameworks -- like generative masked language models and diffusion models -- avoid one-token-at-a-time prediction, and operate on entire sequences at once. A brief overview of these approaches is provided in the appendix. 
+Given that many modalities lack a natural left-to-right structure, one might reasonably ask: why use autoregressive models at all? Indeed, some of the most popular alternative frameworks -- like generative masked language models and diffusion models -- avoid one-token-at-a-time prediction, and operate on entire sequences at once. A brief overview of these approaches is provided in the [Appendix](#appendix). 
 
-However, compared to autoregressive models, these non-sequential architectures sacrifice several desirable properties discussed earlier, including variable-length outputs, efficient sampling with the KV cache, and step-wise guidance. Thus, there remain many settings in which applying autoregressive methods is still desirable. We should note that there is a growing line of work aiming to combine the strengths of autoregressive and diffusion models (Hoogeboom et al., 2021; Chen et al., 2024; Arriola et al., 2025). We set these aside in this post, as our focus is specifically on autoregressive models.
+However, compared to autoregressive models, these non-sequential architectures sacrifice several desirable properties discussed [earlier](#primer-autoregressive-modeling), including variable-length outputs, efficient sampling with the KV cache, and step-wise guidance. Thus, there remain many settings in which applying autoregressive methods is still desirable. We should note that there is a growing line of work aiming to combine the strengths of autoregressive and diffusion models (Hoogeboom et al., 2021; Chen et al., 2024; Arriola et al., 2025). We set these aside in this post, as our focus is specifically on autoregressive models.
 
 A well-studied domain where the lack of an inherent ordering becomes especially salient is vision. Images do not come with a built-in sequence structure, yet significant effort has been devoted to making them autoregressively modelable. We start with this domain as a case study, before diving into more recent trends of tokenization-model alignment.
 
@@ -264,7 +268,18 @@ When a modality lacks an intrinsic traversal order, the challenge is to decide (
 ### Marginalizing over orderings
 What if we simply train the model to be robust to any sequence using data augmentation? This is precisely the method behind **Any-Order Autoregressive Models (AO-ARMs)**, where the model is trained under random orderings drawn uniformly from all permutations of the input sequence (Wang et al., 2025). Given a permutation $\sigma$ of indices $\{1,\dots,n\}$, the learned distribution factorizes as
 $$p(\mathbf{x} \mid \sigma) = \Pi_{i=1}^n p(x_{\sigma_i} \mid \mathbf{x}_{\sigma_{<i}})$$
-where $\sigma_{<i}$ corresponds to indices $\{1, \ldots, i-1\}$ under the permutation σ. In this formulation, the permutation can be interpreted as a latent variable that specifies which conditional subproblem the model solves at each step. 
+where $\sigma_{<i}$ corresponds to indices $\{1, \ldots, i-1\}$ under the permutation σ. In this formulation, the permutation can be interpreted as a latent variable that specifies which conditional subproblem the model solves at each step. HERE1
+<div style="text-align: center; margin: 2rem 0;">
+  <div style="display: inline-block; max-width: 450px; width: 100%;">
+    {% include figure.liquid 
+        path="assets/img/2026-04-27-autoregressive-tokenization/aoarm4.gif" 
+        class="img-fluid rounded z-depth-1"
+    %}
+    <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
+      Any-order autoregressive models predict next-token distributions over randomly selected token orderings.
+    </div>
+  </div>
+</div>
 
 Moreover, each permutation effectively defines a masking pattern: at step $$i$$, the model observes the variables in $\sigma_{<i}$ and treats all variables in $\sigma_{>i}$ as unobserved. Training across many permutations therefore exposes the model to a wide variety of partially observed inputs and forces it to learn conditional distributions of the form
  $$p(x_i \mid \mathbf{x}_{-i}),$$
