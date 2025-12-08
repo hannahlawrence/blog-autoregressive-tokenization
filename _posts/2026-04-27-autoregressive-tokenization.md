@@ -1,6 +1,6 @@
 ---
 layout: distill
-title: "Square Peg, Round Hole: Plugging Non-Sequential Data into Sequential Language Model"
+title: "Square Peg, Round Hole: Plugging Non-Sequential Data into Sequential Language Models"
 description: Your blog post's abstract.
   Please add your abstract or summary here and not in the main body of your text.
   Do not include math/latex or hyperlinks.
@@ -94,10 +94,25 @@ _styles: >
   }
 ---
 
-# Introduction
-Autoregressive sequence models sit at the center of modern generative AI, excelling in settings like natural language where data arrive in a well-defined sequence. However, many important modalities do not immediately offer such a linear structure. Images, graphs, point clouds, and sets lack an intrinsic notion of “the next token.” 
 
-Caption: How can one apply sequential models to non-sequential (e.g. non-language) data? (Note that we will use “autoregressive model” and “sequential model” interchangeably.)
+
+<div style="text-align: center; margin: 2rem 0;">
+  <div style="display: inline-block; max-width: 300px; width: 100%;">
+    {% include figure.liquid 
+        path="assets/img/2026-04-27-autoregressive-tokenization/square_peg.png" 
+        class="img-fluid rounded z-depth-1"
+    %}
+  </div>
+</div>
+
+# Introduction
+Autoregressive sequence models sit at the center of modern generative AI, excelling in settings like natural language where data arrive in a well-defined sequence. However, many important modalities do not immediately offer such a linear structure. Images, graphs, point clouds, and sets lack an intrinsic notion of “the next token.”
+
+
+{% include figure.liquid path="assets/img/2026-04-27-autoregressive-tokenization/intro.png" class="img-fluid" %}
+<div class="caption" style="text-align: center;">
+    How can one apply sequential models to non-sequential (e.g. non-language) data? (Note that we will use “autoregressive model” and “sequential model” interchangeably.)
+</div>
 
 Despite this apparent mismatch between modeling assumption and data structure, autoregressive (AR) models have been repeatedly applied in such non-lingual settings <d-cite key="Antunes2024"></d-cite>. There are good reasons: AR models offer variable-length generation, precise likelihoods, flexible conditioning, and step-by-step controllability (Wang et al., 2024; Chen et al., 2024). Moreover, from a practical perspective, autoregressive models have been engineered and scaled to perfection, with well-established scaling laws, training recipes, and ready-to-use open source libraries.
 
@@ -117,7 +132,17 @@ via the chain rule, by “meaningfully” we refer to how easy it is to model ea
 
 Under this factorization, the model is trained to predict the next token $x_i$ given the context of preceding tokens $x_1,\dots,x_{i-1}$. In transformers, this is implemented via causal masking, where the self-attention mechanism prevents any position from attending to "future" tokens. 
 
-Caption: Autoregressive models predict next-token distributions over tokens based only on the preceding tokens.
+<div style="text-align: center; margin: 2rem 0;">
+  <div style="display: inline-block; max-width: 450px; width: 100%;">
+    {% include figure.liquid 
+        path="assets/img/2026-04-27-autoregressive-tokenization/ar.gif" 
+        class="img-fluid rounded z-depth-1"
+    %}
+    <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
+      Autoregressive models predict next-token distributions over tokens based only on the preceding tokens.
+    </div>
+  </div>
+</div>
 
 ## What exactly are tokens?
 So, an autoregressive model operates on a sequence of discrete tokens representing a piece of data. But what exactly are tokens, and how are they computed? At first, tokens might seem unnecessary. For example, one could simply input the raw byte sequence (e.g. UTF-8 values for text) into an autoregressive model. However, byte sequences can become very long, making long-range dependencies harder to learn and obscuring meaningful linguistic structure that the model could otherwise exploit. As a result, byte-level models often require more computation and struggle to match the efficiency and performance of systems that use more semantically informed units (Choe and Al-Rfou et al., 2019). 
@@ -166,7 +191,17 @@ In this sense, the dichotomy of “sequential” and “non-sequential” is ove
 
 The difference in modelability between different tokens orders is especially clear in domains where different prediction orders induce subproblems of highly varying difficulty. For example, consider training a model to solve Sudoku puzzles. At a given current state, some cells might be nearly forced, while others are highly ambiguous -- so, the difficulty of the prediction subproblem depends strongly on which cell is predicted first. As explored by Kim and Shah et al. (2025), changing the prediction order of the unfilled Sudoku tiles can shift the model from easy, highly-constrained cases to much harder, underdetermined ones. 
 
-
+<div style="text-align: center; margin: 2rem 0;">
+  <div style="display: inline-block; max-width: 450px; width: 100%;">
+    {% include figure.liquid 
+        path="assets/img/2026-04-27-autoregressive-tokenization/sudoku.png" 
+        class="img-fluid rounded z-depth-1"
+    %}
+    <!-- <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
+      Autoregressive models predict next-token distributions over tokens based only on the preceding tokens.
+    </div> -->
+  </div>
+</div>
 
 A similar example appears in arithmetic tasks, where models have been observed to perform better when generating blocks of digits right-to-left than left-to-right, perhaps reflecting how carries propagate in the computation (Singh and Strouse, 2024; Lee et al., 2024). Across these settings, a consistent pattern emerges: prediction orders that better align with a task’s underlying structure tend to be more effective. 
 
@@ -187,7 +222,17 @@ Images have no inherent traversal order, yet to apply autoregressive models, we 
 
 To solve the sequence length problem, the fundamental unit of computation shifted from pixels to patches. This strategy was standardized by Vision Transformers (ViTs) (Dosovitsky et al., 2021): divide the image into fixed-size squares (e.g., 16 x 16), embed each patch as a token with positional encodings, and arrange them in a sequence. Crucially, ViTs retained the raster scan order, as shown at the bottom of the following Figure from Dosovitsky et al., (2021). 
 
-Caption: The Vision Transformer architecture, where the input image is converted into a sequence by flattering the patch grid according to a raster scan order.
+<div style="text-align: center; margin: 2rem 0;">
+  <div style="display: inline-block; width: 100%;">
+    {% include figure.liquid 
+        path="assets/img/2026-04-27-autoregressive-tokenization/vit.png" 
+        class="img-fluid rounded z-depth-1"
+    %}
+    <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
+      The Vision Transformer architecture, where the input image is converted into a sequence by flattering the patch grid according to a raster scan order.
+    </div> 
+  </div>
+</div>
 
 The modern paradigm of autoregressive models for images adopts this patch-based approach via the following two-stage architecture: 
 
@@ -195,7 +240,17 @@ The modern paradigm of autoregressive models for images adopts this patch-based 
 
 2. **Stage 2 - Modeling**: A separate autoregressive (AR) Transformer is trained on the learned tokens in raster order.  By offloading low-level reconstruction to the tokenizer, the AR model can devote its computational capacity to modeling global structure and long-range interactions.
 
-Caption: Autoregressive image modeling tends to follow a two-step approach. In the first stage, discrete image tokens are trained using a reconstruction loss. In the second stage, the now-fixed tokens are fed into a transformer for generation.
+<div style="text-align: center; margin: 2rem 0;">
+  <div style="display: inline-block; width: 100%;">
+    {% include figure.liquid 
+        path="assets/img/2026-04-27-autoregressive-tokenization/two_stage.png" 
+        class="img-fluid rounded z-depth-1"
+    %}
+    <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
+      Autoregressive image modeling tends to follow a two-step approach. In the first stage, discrete image tokens are trained using a reconstruction loss. In the second stage, the now-fixed tokens are fed into a transformer for generation.
+    </div> 
+  </div>
+</div>
 
 Although VQ-VAE and VQGAN tokenizers learn a visual “vocabulary”, they do not remove the need for a fixed ordering, as the tokens are still ordered for input to the transformer. Thus, the **inherent mismatch between the prediction order and the causal structure of natural images remains**: predicting a patch from only previously raster-ordered predecessors might force the model to commit to global structural decisions (e.g., “this is a dog”) based on ambiguous local evidence (e.g., a patch of fur in the top-left corner).  This is just one example of how a representation can induce conditional prediction tasks as subproblems that are poorly aligned with the modality’s underlying structure. With this as motivation, we now turn to the general problem of aligning sequential models with non-sequential data.
 
@@ -249,19 +304,19 @@ The model-level methods show that reordering can meaningfully reduce the difficu
 Tokenization-level methods are motivated by the following question: how can we provide sequential models with the “most sequential,” i.e. most modelable, representation of the input data? If the model generates autoregressively, then the tokenizer can be designed with autoregressive generation in mind from the start!. Thus, they address the reconstruction-generation tradeoff directly at the representation level, rather than merely reordering the prediction path. 
 
 ### Heuristically encouraging AR modelability
-A natural starting point is to impose an ordering that we have good reason to believe (e.g. based on domain intuition) will be easier for an autoregressive model to learn. Instead of relying on the model to discover a useful sequence structure on its own, we can choose an ordering that reflects how information in the modality is organized. A prominent example is Visual Autoregressive Modeling (Tian et al., 2024), which aims to align the prediction order with the hierarchical structure of images. VAR  follows a next-scale prediction strategy, predicting coarse global structure first and then refining with higher-resolution tokens[^diffusion]. By replacing a rigid raster order with a more semantically coherent prediction schedule, VAR closed much of the historical gap between AR and diffusion models in metrics such as image quality, inference speed, data efficiency, and scalability.
+A natural starting point is to impose an ordering that we have good reason to believe (e.g. based on domain intuition) will be easier for an autoregressive model to learn. Instead of relying on the model to discover a useful sequence structure on its own, we can choose an ordering that reflects how information in the modality is organized. A prominent example is **Visual Autoregressive Modeling** (Tian et al., 2024), which aims to align the prediction order with the hierarchical structure of images. VAR  follows a **next-scale** prediction strategy, predicting coarse global structure first and then refining with higher-resolution tokens[^diffusion]. By replacing a rigid raster order with a more semantically coherent prediction schedule, VAR closed much of the historical gap between AR and diffusion models in metrics such as image quality, inference speed, data efficiency, and scalability.
 
 
 Caption: Figure from Tian et al. 2024. AR and VAR both perform sequential generation, but AR generates one patch at a time, whereas VAR generates a (globally) better-resolved image with each timestep.
 
-Note that if prefixes of the token sequence already encode global structure, then shorter sequences essentially give a coarse depiction of the image, while longer sequences progressively increase fidelity. Several works have leveraged this property of coarse-to-fine tokenization to allow for a variable number of tokens per image. In doing so, they also tackle a core limitation of the fixed-size patch grid in standard tokenizers, where every image is forced into the same number of tokens regardless of its complexity. A plain sky and a dense texture both consume the same token budget, creating inefficiency for simple images and information loss for complex ones. Instead, sequence length can track the information density of the image.
+Note that if prefixes of the token sequence already encode global structure, then shorter sequences essentially give a coarse depiction of the image, while longer sequences progressively increase fidelity. Several works have leveraged this property of coarse-to-fine tokenization to allow for a **variable number of tokens per image**. In doing so, they also tackle a core limitation of the fixed-size patch grid in standard tokenizers, where every image is forced into the same number of tokens regardless of its complexity. A plain sky and a dense texture both consume the same token budget, creating inefficiency for simple images and information loss for complex ones. Instead, sequence length can track the information density of the image.
 Some examples of variable-length tokenization methods include:
 
-FlexTok (Bachmann et al., 2025) uses nested dropout, repeatedly chopping off the tail during training so that high-level content is forced into the early positions.
+* **FlexTok** (Bachmann et al., 2025) uses nested dropout, repeatedly chopping off the tail during training so that high-level content is forced into the early positions.
 
-Matryoshka Multimodal Models (Cai et al., 2024) learn nested token subsets where each prefix is already a valid representation and additional tokens just add finer details.
+* **Matryoshka Multimodal Models** (Cai et al., 2024) learn nested token subsets where each prefix is already a valid representation and additional tokens just add finer details.
 
-One-D-Piece (Miwa et al., 2025) introduces a "Tail Token Drop" regularization that removes later tokens on the fly and pushes essential global semantics into the head of the sequence.
+* **One-D-Piece** (Miwa et al., 2025) introduces a "Tail Token Drop" regularization that removes later tokens on the fly and pushes essential global semantics into the head of the sequence.
 
 This shift from “next-patch’’ to “next-scale’’ prediction reframes what it means for images to be “non-sequential”, and illustrates the flexibility that comes with modifying the data representation directly (rather than just the ordering of predefined tokens). While there is no obvious choice of order in the spatial dimension, VAR suggests that the ordering along the resolution dimension is highly modelable in an autoregressive manner. 
 
@@ -274,11 +329,11 @@ To bridge this gap, recent works have introduced an autoregressive prior directl
 
 Caption: Three approaches to incorporating autoregressive priors during tokenization. CRT (Ramanujan et al., 2025) adds next-token prediction on continuous latents, AliTok (Wu et al., 2025) imposes causal decoding during Stage 1 but relaxes it during Stage 2, and LARP applies an AR prior only to global query tokens produced by a stochastic quantizer.
 
-Causally Regularized Tokenization (CRT). Ramanujan et al. (2025) keep the standard encoder-quantizer-decoder architecture, but modify the objective function. CRT adds a next-token prediction loss on the pre-quantized continuous latents, encouraging tokens to be predictable from their predecessors. This explicitly trades off reconstruction quality for AR predictability and yields better downstream generative performance as well as computational efficiency.
+**Causally Regularized Tokenization** (CRT). Ramanujan et al. (2025) keep the standard encoder-quantizer-decoder architecture, but modify the objective function. CRT adds a next-token prediction loss on the pre-quantized continuous latents, encouraging tokens to be predictable from their predecessors. This explicitly trades off reconstruction quality for AR predictability and yields better downstream generative performance as well as computational efficiency.
 
-Aligned Tokenizer (AliTok). Wu et al. (2025) propose AliTok, which directly constrains the decoder to be autoregressive. While the causal decoder provides a mechanism for enforcing sequential structure in the tokens, it also limits reconstruction quality. During the second stage, this limitation is mitigated by jointly training a high-fidelity bidirectional decoder while retaining the causal structure from the first stage. This approach offers a practical means of reconciling the two objectives, albeit through a multi-step process.
+**Aligned Tokenizer** (AliTok). Wu et al. (2025) propose AliTok, which directly constrains the decoder to be autoregressive. While the causal decoder provides a mechanism for enforcing sequential structure in the tokens, it also limits reconstruction quality. During the second stage, this limitation is mitigated by jointly training a high-fidelity bidirectional decoder while retaining the causal structure from the first stage. This approach offers a practical means of reconciling the two objectives, albeit through a multi-step process.
 
-Learned AutoRegressive generative Prior (LARP): Instead of forcing autoregressive constraints onto all patch tokens, LARP (Wang et al., 2025) adds a set of learned “holistic” query tokens that summarize high-level video semantics. An AR prior is trained only on these (de-quantized) query vectors, giving them a coherent causal structure without imposing constraints on the low-level patch tokens. Since they opt to use a stochastic vector quantization scheme (sampling from the codebook similarity distribution), the AR prior is trained to predict the next-token distribution. 
+**Learned AutoRegressive generative Prior** (LARP): Instead of forcing autoregressive constraints onto all patch tokens, LARP (Wang et al., 2025) adds a set of learned “holistic” query tokens that summarize high-level video semantics. An AR prior is trained only on these (de-quantized) query vectors, giving them a coherent causal structure without imposing constraints on the low-level patch tokens. Since they opt to use a stochastic vector quantization scheme (sampling from the codebook similarity distribution), the AR prior is trained to predict the next-token distribution. 
 Despite the surface-level methodological differences between these methods, they all build sequentiality directly into the learned tokenizer, using general learning methods rather than heuristics.
 
 # Outlook: what is the future for non-sequential data?
@@ -310,17 +365,14 @@ There are many possible routes for the future of non-sequential data. Perhaps sp
 ## Examples of non-sequential generative models
 Masked Language Models (MLMs) depart from the autoregressive likelihood factorization by adopting a denoising objective that permits bidirectional context. The model learns to reconstruct missing tokens from a global view of the input, rather than relying only on past context. This approach was popularized at scale by BERT, which showed that masked language modeling can produce highly transferable representations for a wide range of downstream tasks (Devlin et al., 2019).
 
-Given an input sequence , a random subset of tokens at positions  are replaced with a special [MASK] token. The model receives the masked sequence , where  for , and is optimized to estimate the conditional distributions,
+Given an input sequence $\mathbf{x}$, a random subset of tokens at positions $M \subset \{1,\dots,n\}$ are replaced with a special [MASK] token. The model receives the masked sequence $\tilde{\mathbf{x}}$, where $\tilde{\mathbf{x}}_i = \text[MASK]$ for $i \in M$, and is optimized to estimate the conditional distributions,
+$$p(x_i \mid \tilde{\mathbf{x}}), \quad \text{for all } i \in M.$$
 
-
-
-
-
-In expectation, this objective is repeated over many different random masks , exposing the model to a rich family of partially observed subproblems. In this sense, autoregressive models can be seen as a specific subproblem of MLMs, where the masking is always applied to the final position in the input sequence and the prediction is conditioned only on past tokens. Note that unlike ARMs, MLMs do not yield a tractable likelihood over complete sequences. The loss is a sum of cross-entropies over the randomly masked positions, which is not equal to the log-likelihood of the whole sequence (as was the case with ARMs):
-
+In expectation, this objective is repeated over many different random masks $$M$$, exposing the model to a rich family of partially observed subproblems. In this sense, **autoregressive models can be seen as a specific subproblem of MLMs**, where the masking is always applied to the final position in the input sequence and the prediction is conditioned only on past tokens. Note that unlike ARMs, MLMs do not yield a tractable likelihood over complete sequences. The loss is a sum of cross-entropies over the randomly masked positions, which is not equal to the log-likelihood of the whole sequence (as was the case with ARMs):
+$$\mathcal{L_{\text{MLM}}}(\theta) = -\sum_{i \in M} \log p_\theta(x_i \mid \tilde{\mathbf{x}}).$$
 
 Despite relaxing the left-to-right prediction order, MLMs still rely on the underlying positional structure of the sequence (as captured by the positional encodings) to determine which tokens constitute the context for each prediction. Thus, both ARMs and MLMs fundamentally assume an ordered sequence of tokens. 
 
-If we view masking as a type of corruption process, then iterating the reconstruction step naturally gives rise to diffusion models (Ho et al., 2020). Diffusion models define a forward process that starts from the data  and progressively adds noise until the sample becomes nearly Gaussian. The reverse process refines the entire sample at once rather than predicting one symbol at a time, meaning that generation is defined without any notion of token order. While diffusion models have historically achieved better generative performance than autoregressive approaches in continuous domains, recent work suggests that this gap may be narrowing as better latent parameterizations become available (Tian et al., 2024).
+If we view masking as a type of corruption process, then iterating the reconstruction step naturally gives rise to **diffusion models** (Ho et al., 2020). Diffusion models define a forward process that starts from the data **x_0$$ and progressively adds noise until the sample becomes nearly Gaussian. The reverse process refines the entire sample at once rather than predicting one symbol at a time, meaning that generation is defined without any notion of token order. While diffusion models have historically achieved better generative performance than autoregressive approaches in continuous domains, recent work suggests that this gap may be narrowing as better latent parameterizations become available (Tian et al., 2024).
 
-While diffusion was originally formulated using continuous Gaussian noise, several lines of work show that the same iterative denoising idea extends naturally to discrete domains. Discrete denoising diffusion probabilistic models (D3PM) replace Gaussian noise with a categorical corruption process such as random token replacement (Austin et al., 2021). Alternatively, Masked Diffusion Models (MDMs) use masking rather than categorical replacement as the corruption operator (Lou et al., 2024), where each diffusion step applies a random masking pattern and the model is trained to reconstruct the missing content. As highlighted by Zheng et al. (2024), this makes the learning problem of MDMs equivalent to MLMs.
+While diffusion was originally formulated using continuous Gaussian noise, several lines of work show that the same iterative denoising idea extends naturally to discrete domains. Discrete denoising diffusion probabilistic models (D3PM) replace Gaussian noise with a categorical corruption process such as random token replacement (Austin et al., 2021). Alternatively, **Masked Diffusion Models (MDMs)** use masking rather than categorical replacement as the corruption operator (Lou et al., 2024), where each diffusion step applies a random masking pattern and the model is trained to reconstruct the missing content. As highlighted by Zheng et al. (2024), this makes the **learning problem of MDMs equivalent to MLMs**.
