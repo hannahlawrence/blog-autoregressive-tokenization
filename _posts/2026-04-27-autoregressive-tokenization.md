@@ -1,7 +1,7 @@
 ---
 layout: distill
 title: "Square Peg, Round Hole: Plugging Non-Sequential Data into Sequential Language Models"
-description: Autoregressive (AR) models are central to modern generative AI systems, yet their sequential inductive bias clashes with modalities that lack an obvious ordering, such as images, graphs, and point clouds. Despite this mismatch, AR models are widely used beyond language, owing to their scalability and controllability. This post highlights the growing set of techniques that make non-sequential data amenable to autoregressive modeling. There are two broad directions: approaches that choose or optimize a generation order for a fixed tokenization, and approaches that redesign the tokenization itself to simplify each next-token prediction step. We emphasize the tradeoffs these methods face, particularly between compression and autoregressive ``modelability”. By drawing these connections, we aim to motivate future work on tokenizations tailored to the needs of autoregressive models for arbitrary datatypes.
+description: "Autoregressive (AR) models are central to modern generative AI systems, yet their sequential inductive bias clashes with modalities that lack an obvious ordering, such as images, graphs, and point clouds. Despite this mismatch, AR models are widely used beyond language, owing to their scalability and controllability. This post highlights the growing set of techniques that make non-sequential data amenable to autoregressive modeling. There are two broad directions: approaches that choose or optimize a generation order for a fixed tokenization, and approaches that redesign the tokenization itself to simplify each next-token prediction step. We emphasize the tradeoffs these methods face, particularly between compression and autoregressive ``modelability”. By drawing these connections, we aim to motivate future work on tokenizations tailored to the needs of autoregressive models for arbitrary datatypes."
 date: 2026-04-27
 future: true
 htmlwidgets: true
@@ -63,6 +63,7 @@ toc:
           - name: Autoregressive priors
   - name: "Conclusion"
   - name: Appendix
+  - name: Footnotes
 
 # Below is an example of injecting additional post-specific styles.
 # This is used in the 'Layouts' section of this post.
@@ -118,7 +119,7 @@ A central assumption behind ARMs is that data can be meaningfully factorized int
 $$ x = (x_1,\dots,x_n)$$
 where each token depends on those who came before it. Although **any** sequence of data can be factorized as 
 
-$$ p(x_1,\dots,x_n)=p(x_1)p(x_2|x_1)p(x_3|x_1,x_2)\dots $$
+$$ p(x_1,\dots,x_n)=p(x_1)p(x_2\mid x_1)p(x_3 \mid x_1,x_2)\dots $$
 
 via the chain rule, by “meaningfully” we refer to how easy it is to model each of the individual factors $p(x_i|x_1,\dots,x_{i-1})$  — more on this in the next section.  
 
@@ -175,7 +176,12 @@ At a high-level, modelability is a general and ubiquitous idea in representation
 
 We focus here on the specific notion of modelability for autoregressive models. The data representation is now not a single vector per datapoint, but a sequence of discrete tokens $x_1,\dots,x_n$ per datapoint. Since autoregressive models factor the data distribution as 
 $\prod_{i=1}^n p(x_i \mid x_{<i})$,
- modelability asks: are the induced conditional distributions $p(x_i \mid x_{<i})$ **learnable by your model class**? Formally, we can write this as the expected binary cross-entropy (BCE) loss (denoted by $\ell(\text{distribution}, \text{true label})$) of the best next-token prediction model $p_{\theta^*}$ from the model class: $E_{x_1,\dots,x_n}\,\ell \big(p_\theta(\cdot \mid x_{<i}),\, x_i\big)$.
+ modelability asks: are the induced conditional distributions $p(x_i \mid x_{<i})$ **learnable by your model class**? Formally, we can write this as the expected binary cross-entropy (BCE) loss (denoted by $\ell(\text{distribution}, \text{true label})$) of the best next-token prediction model $p_{\theta^*}$ from the model class: 
+ 
+ $$
+ \mathbb{E}_{x_1,\dots,x_n} \ell \left(p_\theta(\cdot \mid x_{< i}), x_i \right)
+ $$
+
 Here, by the “best” model we mean the model produced by a training procedure (usually, optimizing for the same BCE loss) over a finite training set. 
 
 In words, the autoregressive modelability of a tokenization is simply the test perplexity of the best next-token prediction model. Language (under any standard tokenizer) is highly modelable because next-token models do a good job at, well, predicting the next tokens. Note that modelability is a property of a specific tokenization of a data distribution, not the modality itself. For any data distribution and model class, we can ask what tokenization yields the optimal modelability score (the equation above). Thus, this notion of modelability implicitly depends on the inductive biases and computational limitations (e.g., finite context length and recency bias) of the model class.[^tokenization] 
@@ -299,8 +305,10 @@ Rather than using a heuristic, Wang et al. <d-cite key="wang2025learningorder"><
 $$p_x(\sigma) = \Pi_i p(\sigma_i \mid \sigma_{<i}, x_{\sigma_{<i}})$$
 that, given a partially masked input, chooses a position to unmask next. At the same time, a shared model (UNet for images, Graph Transformer for molecules) produces value logits for every position. Once the order-policy selects a position $$\sigma_i$$, the model applies a softmax to choose **what value to place there**. The resulting orderings were found to reflect coherent structural patterns, such as placing border pixels in images or bond structures in molecular graphs first in the ordering! 
 
-
-Caption: The LO-ARM sampling process, in which a shared model jointly predicts which position to unmask next and what value to assign.
+{% include figure.liquid path="assets/img/2026-04-27-autoregressive-tokenization/lo-arm.png" class="img-fluid" %}
+<div class="caption" style="text-align: center;">
+    The LO-ARM sampling process, in which a shared model jointly predicts which position to unmask next and what value to assign.
+</div>
 
 A closely related learned-ordering approach is **REOrder** <d-cite key="kutscher2025reorderingpatchesimprovesvision"></d-cite>, which also trains a policy network to select the next position, and then trains an autoregressive model to follow the discovered task-optimal ordering.
 
@@ -313,7 +321,10 @@ Tokenization-level methods are motivated by the following question: how can we p
 A natural starting point is to impose an ordering that we have good reason to believe (e.g. based on domain intuition) will be easier for an autoregressive model to learn. Instead of relying on the model to discover a useful sequence structure on its own, we can choose an ordering that reflects how information in the modality is organized. A prominent example is **Visual Autoregressive Modeling** <d-cite key="tian2024visual"></d-cite>, which aims to align the prediction order with the hierarchical structure of images. VAR  follows a **next-scale** prediction strategy, predicting coarse global structure first and then refining with higher-resolution tokens[^diffusion]. By replacing a rigid raster order with a more semantically coherent prediction schedule, VAR closed much of the historical gap between AR and diffusion models in metrics such as image quality, inference speed, data efficiency, and scalability.
 
 
-Caption: Figure from Tian et al. <d-cite key="tian2024visual"></d-cite>. AR and VAR both perform sequential generation, but AR generates one patch at a time, whereas VAR generates a (globally) better-resolved image with each timestep.
+{% include figure.liquid path="assets/img/2026-04-27-autoregressive-tokenization/var.png" class="img-fluid" %}
+<div class="caption" style="text-align: center;">
+    Figure from <d-cite key="tian2024visual"></d-cite>. AR and VAR both perform sequential generation, but AR generates one patch at a time, whereas VAR generates a (globally) better-resolved image with each timestep.
+</div>
 
 Note that if prefixes of the token sequence already encode global structure, then shorter sequences essentially give a coarse depiction of the image, while longer sequences progressively increase fidelity. Several works have leveraged this property of coarse-to-fine tokenization to allow for a **variable number of tokens per image**. In doing so, they also tackle a core limitation of the fixed-size patch grid in standard tokenizers, where every image is forced into the same number of tokens regardless of its complexity. A plain sky and a dense texture both consume the same token budget, creating inefficiency for simple images and information loss for complex ones. Instead, sequence length can track the information density of the image.
 Some examples of variable-length tokenization methods include:
@@ -333,7 +344,10 @@ Identifying the most modelable order may require deep domain knowledge in most s
 In the standard two-stage tokenization-generation paradigm, Stage 1 and Stage 2 are often treated as independent problems. The tokenizer minimizes reconstruction loss, while the generator minimizes prediction loss. However, a tokenizer that is optimal for reconstruction with a global, bidirectional decoder is often suboptimal for autoregressive generation. 
 To bridge this gap, recent works have introduced an autoregressive prior directly into the Stage 1 training process. By enforcing causal constraints during tokenization, these methods ensure the resulting codebook aligns with the sequential nature of the downstream generator. We visualize three representative approaches to this alignment in the figure below:
 
-Caption: Three approaches to incorporating autoregressive priors during tokenization. CRT <d-cite key="ramanujan2025when"></d-cite> adds next-token prediction on continuous latents, AliTok <d-cite key="wu2025sequencemodelingalignmenttokenizer"></d-cite> imposes causal decoding during Stage 1 but relaxes it during Stage 2, and LARP <d-cite key="wang2025larp"></d-cite> applies an AR prior only to global query tokens produced by a stochastic quantizer.
+{% include figure.liquid path="assets/img/2026-04-27-autoregressive-tokenization/token_level.png" class="img-fluid" %}
+<div class="caption" style="text-align: center;">
+    Three approaches to incorporating autoregressive priors during tokenization. CRT <d-cite key="ramanujan2025when"></d-cite> adds next-token prediction on continuous latents, AliTok <d-cite key="wu2025sequencemodelingalignmenttokenizer"></d-cite> imposes causal decoding during Stage 1 but relaxes it during Stage 2, and LARP <d-cite key="wang2025larp"></d-cite> applies an AR prior only to global query tokens produced by a stochastic quantizer.
+</div>
 
 **Causally Regularized Tokenization** (CRT). Ramanujan et al.  <d-cite key="ramanujan2025when"></d-cite> keep the standard encoder-quantizer-decoder architecture, but modify the objective function. CRT adds a next-token prediction loss on the pre-quantized continuous latents, encouraging tokens to be predictable from their predecessors. This explicitly trades off reconstruction quality for AR predictability and yields better downstream generative performance as well as computational efficiency.
 
@@ -380,3 +394,5 @@ Despite relaxing the left-to-right prediction order, MLMs still rely on the unde
 If we view masking as a type of corruption process, then iterating the reconstruction step naturally gives rise to **diffusion models** <d-cite key="Ho2020"></d-cite>. Diffusion models define a forward process that starts from the data $x_0$ and progressively adds noise until the sample becomes nearly Gaussian. The reverse process refines the entire sample at once rather than predicting one symbol at a time, meaning that generation is defined without any notion of token order. While diffusion models have historically achieved better generative performance than autoregressive approaches in continuous domains, recent work suggests that this gap may be narrowing as better latent parameterizations become available <d-cite key="tian2024visual"></d-cite>.
 
 While diffusion was originally formulated using continuous Gaussian noise, several lines of work show that the same iterative denoising idea extends naturally to discrete domains. Discrete denoising diffusion probabilistic models (D3PM) replace Gaussian noise with a categorical corruption process such as random token replacement <d-cite key="austin2021"></d-cite>. Alternatively, **Masked Diffusion Models (MDMs)** use masking rather than categorical replacement as the corruption operator <d-cite key="lou2024discrete"></d-cite>, where each diffusion step applies a random masking pattern and the model is trained to reconstruct the missing content. As highlighted by Zheng et al. <d-cite key="zheng2025masked"></d-cite>, this makes the **learning problem of MDMs equivalent to MLMs**.
+
+# Footnotes
