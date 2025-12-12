@@ -1,7 +1,7 @@
 ---
 layout: distill
 title: "Square Peg, Round Hole: Plugging Non-Sequential Data into Sequential Language Models"
-description: "Autoregressive (AR) models are central to modern generative AI systems, yet their sequential inductive bias clashes with modalities that lack an obvious ordering, such as images, graphs, and point clouds. Despite this mismatch, AR models are widely used beyond language, owing to their scalability and controllability. This post highlights the growing set of techniques that make non-sequential data amenable to autoregressive modeling. There are two broad directions: approaches that choose or optimize a generation order for a fixed tokenization, and approaches that redesign the tokenization itself to simplify each next-token prediction step. We emphasize the tradeoffs these methods face, particularly between compression and autoregressive ``modelability”. By drawing these connections, we aim to motivate future work on tokenizations tailored to the needs of autoregressive models for arbitrary datatypes."
+description: "Autoregressive (AR) models are central to modern generative AI systems, yet their sequential inductive bias clashes with modalities that lack an obvious ordering, such as images, graphs, and point clouds. Despite this mismatch, AR models are widely used beyond language, owing to their scalability and controllability. This post highlights the growing set of techniques that make non-sequential data amenable to autoregressive modeling. There are two broad directions: approaches that choose or optimize a generation order for a fixed tokenization, and approaches that redesign the tokenization itself to simplify each next-token prediction step. We emphasize the tradeoffs these methods face, particularly between compression and autoregressive \"modelability\". By drawing these connections, we aim to motivate future work on tokenizations tailored to the needs of autoregressive models for arbitrary datatypes."
 date: 2026-04-27
 future: true
 htmlwidgets: true
@@ -146,7 +146,7 @@ This motivated the use of **tokenization**: the process of mapping raw data into
 
 * “codebook” → [‘code’, ‘book’]
 
-Subword methods strike a balance between vocabulary size and sequence length, whereas byte-level tokenization uses a near-minimal vocabulary that results in no information loss but produces considerably longer sequences. These choices reflect a fundamental tension in tokenizer design: **a tokenizer optimized purely for compression (i.e. the best reconstruction per bit budget) is not necessarily the one that is easiest for a generative model to predict** (as evidenced by e.g. CITE, who demonstrate that a naive compression-based tokenizer works poorly for language modeling). Later sections will revisit this reconstruction-generation tradeoff from multiple angles.
+Subword methods strike a balance between vocabulary size and sequence length, whereas byte-level tokenization uses a near-minimal vocabulary that results in no information loss but produces considerably longer sequences. These choices reflect a fundamental tension in tokenizer design: **a tokenizer optimized purely for compression (i.e. the best reconstruction per bit budget) is not necessarily the one that is easiest for a generative model to predict** (as evidenced by e.g. <d-cite key="lester2024training"></d-cite>, who demonstrate that a naive compression-based tokenizer works poorly for language modeling). Later sections will revisit this reconstruction-generation tradeoff from multiple angles.
 
 Each token is moreover associated with a positional encoding, which encodes that token’s position in the sequence and breaks the native permutational invariance of the attention mechanism. However, even without positional encodings, the causal attention mask of autoregressive models still forces token generation to occur in a specific order. Thus, simply removing positional encodings does not fundamentally change the sequential nature of causal attention, as works like NoPos <d-cite key="haviv-etal-2022-transformer"></d-cite> have demonstrated.
 
@@ -264,6 +264,11 @@ In other words, the two overarching categories of approaches we identify are:
 * **Tokenization-level**: Given a desired ordering, adjust or learn the tokenization itself so that the resulting tokens are better aligned with it.
 
 We further subdivide these categories according to the following flowchart, which serves as a roadmap for the remainder of the post.
+
+{% include figure.liquid path="assets/img/2026-04-27-autoregressive-tokenization/roadmap.png" class="img-fluid" %}
+<div class="caption" style="text-align: center;">
+    What we term model-level vs token-level approaches for applying autoregressive models to data without clear sequential structure.
+</div>
 
 
 ## Model-level alignment
