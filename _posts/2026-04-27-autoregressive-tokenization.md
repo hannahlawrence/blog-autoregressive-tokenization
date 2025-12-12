@@ -121,7 +121,7 @@ where each token depends on those who came before it. Although **any** sequence 
 
 $$ p(x_1,\dots,x_n)=p(x_1)p(x_2\mid x_1)p(x_3 \mid x_1,x_2)\dots $$
 
-via the chain rule, by “meaningfully” we refer to how easy it is to model each of the individual factors $p(x_i|x_1,\dots,x_{i-1})$  — more on this in the next section.  
+via the chain rule, by “meaningfully” we refer to how easy it is to model each of the individual factors $$p(x_i \mid x_1,\dots,x_{i-1})$$  — more on this in the next section.  
 
 Under this factorization, the model is trained to predict the next token $x_i$ given the context of preceding tokens $x_1,\dots,x_{i-1}$. In transformers, this is implemented via causal masking, where the self-attention mechanism prevents any position from attending to "future" tokens. 
 
@@ -176,7 +176,7 @@ At a high-level, modelability is a general and ubiquitous idea in representation
 
 We focus here on the specific notion of modelability for autoregressive models. The data representation is now not a single vector per datapoint, but a sequence of discrete tokens $x_1,\dots,x_n$ per datapoint. Since autoregressive models factor the data distribution as 
 $\prod_{i=1}^n p(x_i \mid x_{<i})$,
- modelability asks: are the induced conditional distributions $p(x_i \mid x_{<i})$ **learnable by your model class**? Formally, we can write this as the expected binary cross-entropy (BCE) loss (denoted by $\ell(\text{distribution}, \text{true label})$) of the best next-token prediction model $p_{\theta^*}$ from the model class: 
+ modelability asks: are the induced conditional distributions $p(x_i \mid x_{<i})$ **easily learnable by your model class**? Formally, we can write this as the expected binary cross-entropy (BCE) loss (denoted by $\ell(\text{distribution}, \text{true label})$) of the best next-token prediction model $p_{\theta^*}$ from the model class: 
  
  $$
  \mathbb{E}_{x_1,\dots,x_n} \ell \left(p_\theta(\cdot \mid x_{< i}), x_i \right)
