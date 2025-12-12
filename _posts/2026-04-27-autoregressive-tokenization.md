@@ -1,7 +1,7 @@
 ---
 layout: distill
 title: "Square Peg, Round Hole: Plugging Non-Sequential Data into Sequential Language Models"
-description: "Autoregressive (AR) models are central to modern generative AI systems, yet their sequential inductive bias clashes with modalities that lack an obvious ordering, such as images, graphs, and point clouds. Despite this mismatch, AR models are widely used beyond language, owing to their scalability and controllability. This post highlights the growing set of techniques that make non-sequential data amenable to autoregressive modeling. There are two broad directions: approaches that choose or optimize a generation order for a fixed tokenization, and approaches that redesign the tokenization itself to simplify each next-token prediction step. We emphasize the tradeoffs these methods face, particularly between compression and autoregressive \"modelability\". By drawing these connections, we aim to motivate future work on tokenizations tailored to the needs of autoregressive models for arbitrary datatypes."
+description: "Autoregressive (AR) models are central to modern generative AI systems, yet their sequential inductive bias clashes with modalities that lack an obvious ordering, such as images, graphs, and point clouds. Despite this mismatch, AR models are widely used beyond language, owing to their scalability and controllability. This post highlights the growing set of techniques that make non-sequential data amenable to autoregressive modeling. There are two broad directions: approaches that choose or optimize a generation order for a fixed tokenization, and approaches that redesign the tokenization itself to simplify each next-token prediction step. We emphasize the tradeoffs these methods face, particularly between compression and autoregressive &quot;modelability&quot;. By drawing these connections, we aim to motivate future work on tokenizations tailored to the needs of autoregressive models for arbitrary datatypes."
 date: 2026-04-27
 future: true
 htmlwidgets: true
@@ -152,7 +152,7 @@ Each token is moreover associated with a positional encoding, which encodes that
 
 ## Tokenization-free methods
 
-A few recent “tokenization-free” approaches have moved away from the tokenization paradigm, which suffers from various idiosyncrasies and challenges for multilingual data <d-cite key="neitemeier2025hierarchical"></d-cite>. Instead of committing to a predefined vocabulary or a fixed sequence structure, approaches such as the Byte Latent Transformer <d-cite key="npagnoni-etal-2025-byte"></d-cite> and H-Net <d-cite key="hwang2025dynamicchunkingendtoendhierarchical"></d-cite> let the representational units evolve during generation. If the model can decide how to construct these building blocks as it trains, then the tokenization becomes an emergent property of the model’s inference dynamics, rather than something constructed ahead of time. 
+A few recent “tokenization-free” approaches have moved away from the tokenization paradigm, which suffers from various idiosyncrasies and challenges for multilingual data <d-cite key="neitemeier2025hierarchical"></d-cite>. Instead of committing to a predefined vocabulary or a fixed sequence structure, approaches such as the Byte Latent Transformer <d-cite key="pagnoni-etal-2025-byte"></d-cite> and H-Net <d-cite key="hwang2025dynamicchunkingendtoendhierarchical"></d-cite> let the representational units evolve during generation. If the model can decide how to construct these building blocks as it trains, then the tokenization becomes an emergent property of the model’s inference dynamics, rather than something constructed ahead of time. 
 While promising as methods for transcending hand-designed, modality-specific tokenizations, both of these models **remain autoregressive**. In other words, they both work with fixed sequences of bytes. Thus, although we will focus on the more widespread tokenization paradigm in the rest of this blog post, the mismatch between sequential models and non-sequential data prevails for tokenization-free methods, too. 
 
 ## Advantages
@@ -198,9 +198,9 @@ The difference in modelability between different tokens orders is especially cle
         path="assets/img/2026-04-27-autoregressive-tokenization/sudoku.png" 
         class="img-fluid rounded z-depth-1"
     %}
-    <!-- <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
-      Autoregressive models predict next-token distributions over tokens based only on the preceding tokens.
-    </div> -->
+    <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #555;">
+      Example of a 4x4 Sudoku board where filling in a highly constrained square first forces the remaining moves, while starting elsewhere would be more ambiguous. Figure taken from <d-cite key="woojrSudokuKids"></d-cite>.
+    </div>
   </div>
 </div>
 
